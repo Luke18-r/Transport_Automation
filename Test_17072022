@@ -1,0 +1,158 @@
+#include <LiquidCrystal_I2C.h>
+#include <Adafruit_MPU6050.h>
+#include <Adafruit_Sensor.h>
+#include <Wire.h>
+#include <DHT.h>
+
+
+
+#define DHTPIN 15 //Seteaza pinul pentru sesnzorul DHT
+#define DHTTYPE DHT11 //Seteaza tipul senzorului DHT
+Adafruit_MPU6050 mpu;
+int lcdColoane = 16;// Numarul de coloane
+int lcdRanduri = 2;// Numarul de randuri
+const int Cald = 32;
+const int Rece = 33;
+
+LiquidCrystal_I2C lcd(0x27,lcdColoane,lcdRanduri);
+DHT dht(DHTPIN, DHTTYPE);
+
+
+void setup(void){
+  Serial.begin(115200);//Seteaza rata de transfer a circuitului
+  lcd.begin();//initializeaza LCD-ul
+  lcd.backlight();//Porneste lumina LCD-ului
+  pinMode(Rece, OUTPUT);
+  pinMode(Cald, OUTPUT);
+  dht.begin();
+
+
+  while(!Serial)
+    delay(10);
+
+  Serial.println("Testeaza Accelerometrul!");
+
+  if(!mpu.begin()){
+    Serial.println("A esuat sa gaseasca Accelerometrul!");
+    while(1){
+      delay(10);
+      }
+  }
+  Serial.println("Accelerometru gasit!");
+
+   mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
+  Serial.print("Accelerometer range set to: ");
+  switch (mpu.getAccelerometerRange()) {
+  case MPU6050_RANGE_2_G:
+    Serial.println("+-2G");
+    break;
+  case MPU6050_RANGE_4_G:
+    Serial.println("+-4G");
+    break;
+  case MPU6050_RANGE_8_G:
+    Serial.println("+-8G");
+    break;
+  case MPU6050_RANGE_16_G:
+    Serial.println("+-16G");
+    break;
+  }
+
+   mpu.setFilterBandwidth(MPU6050_BAND_5_HZ);
+  Serial.print("Filter bandwidth set to: ");
+  switch (mpu.getFilterBandwidth()) {
+  case MPU6050_BAND_260_HZ:
+    Serial.println("260 Hz");
+    break;
+  case MPU6050_BAND_184_HZ:
+    Serial.println("184 Hz");
+    break;
+  case MPU6050_BAND_94_HZ:
+    Serial.println("94 Hz");
+    break;
+  case MPU6050_BAND_44_HZ:
+    Serial.println("44 Hz");
+    break;
+  case MPU6050_BAND_21_HZ:
+    Serial.println("21 Hz");
+    break;
+  case MPU6050_BAND_10_HZ:
+    Serial.println("10 Hz");
+    break;
+  case MPU6050_BAND_5_HZ:
+    Serial.println("5 Hz");
+    break;
+  }
+
+  Serial.println("");
+  delay(100);
+
+  
+}
+
+void loop(){
+
+  float Umiditate = dht.readHumidity();
+  float Temperatura = dht.readTemperature();
+  float hic = dht.computeHeatIndex(Temperatura, Umiditate, false);
+  
+   if (isnan(Umiditate) || isnan(Temperatura)) {
+    Serial.println(F("S-a esuat citirea datelor de la senzor!"));
+    return;
+  }
+
+  
+
+  
+  lcd.setCursor(0, 0);//Seteaza cursorul sa scrie de la pozitia 0,0
+  lcd.print("Temp:");//Scrie comentariul
+  lcd.setCursor(5, 0);//Seteaza cursorul sa scrie de la pozitia 0,0
+  lcd.print(Temperatura);//Scrie comentariul
+  lcd.setCursor(0,1);//Seteaza cursorul sa scrie de la pozitia 0,1
+  lcd.print("Umid:");//Scrie comentariul
+  lcd.setCursor(5,1);//Seteaza cursorul sa scrie de la pozitia 0,1
+  lcd.print(Umiditate);//Scrie comentariul
+  
+   sensors_event_t a, temp;
+  mpu.getEvent(&a,&a, &temp);
+
+  /* Print out the values */
+  Serial.print("Acceleration X: ");
+  Serial.print(a.acceleration.x);
+  Serial.print(", Y: ");
+  Serial.print(a.acceleration.y);
+  Serial.print(", Z: ");
+  Serial.print(a.acceleration.z);
+  Serial.println(" m/s^2");
+
+  Serial.print(F("Umiditatea: "));
+  Serial.print(Umiditate);
+  Serial.print(F("%  Temperatura senzor: "));
+  Serial.print(Temperatura);
+  Serial.print(F("°F  Indicele de caldura : "));
+  Serial.print(hic);
+  Serial.print("\n");
+
+  Serial.print("Temperatura accelerometru: ");
+  Serial.print(temp.temperature);
+  Serial.println(" degC");
+
+  Serial.println("");
+  delay(500);
+
+
+  if(Temperatura>25){
+    digitalWrite(Rece, HIGH);
+    }else{
+      digitalWrite(Rece, LOW);
+      }
+
+   if(Temperatura<24){
+    digitalWrite(Cald, HIGH);
+    }else{
+      digitalWrite(Cald, LOW);
+      }
+      
+
+
+
+}
